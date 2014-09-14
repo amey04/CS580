@@ -13,7 +13,10 @@ int GzNewRender(GzRender **render, GzRenderClass renderClass, GzDisplay *display
 - span interpolator needs pointer to display for pixel writes
 - check for legal class GZ_Z_BUFFER_RENDER
 */
-
+	*render = new GzRender();
+	(*render)->renderClass = renderClass;
+	(*render)->display = display;
+	(*render)->open = 0;
 	return GZ_SUCCESS;
 }
 
@@ -23,7 +26,7 @@ int GzFreeRender(GzRender *render)
 /* 
 -free all renderer resources
 */
-
+	delete render;
 	return GZ_SUCCESS;
 }
 
@@ -33,6 +36,13 @@ int GzBeginRender(GzRender	*render)
 /* 
 - set up for start of each frame - init frame buffer
 */
+	/*if(GzInitDisplay(render->display) == GZ_FAILURE) {
+		return GZ_FAILURE;
+	}*/
+	render->open = 1;
+	render->flatcolor[0] = 0;
+	render->flatcolor[1] = 0;
+	render->flatcolor[2] = 0;
 	return GZ_SUCCESS;
 }
 
@@ -44,7 +54,13 @@ int GzPutAttribute(GzRender	*render, int numAttributes, GzToken	*nameList,
 - set renderer attribute states (e.g.: GZ_RGB_COLOR default color)
 - later set shaders, interpolaters, texture maps, and lights
 */
-
+	for(int i = 0; i < numAttributes ; i++) {
+		if(nameList[i] == GZ_RGB_COLOR) {
+			render->flatcolor[0] = (float*)valueList[0];
+			render->flatcolor[1] = (float*)valueList[1];
+			render->flatcolor[2] = (float*)valueList[2];
+		}
+	}
 	return GZ_SUCCESS;
 }
 

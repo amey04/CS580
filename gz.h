@@ -66,5 +66,5 @@ typedef int		GzDepth;	/* z is signed for clipping */
 #define U       0               /* array indicies for texture coords */
 #define V       1
 
-
+short ctoi(float);
 

@@ -173,7 +173,7 @@ int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
 			//x = (-C - By)/A
 			int leftEdge = 0;
 			float x1 = (-C[2] - B[2]*cord[1][1])/A[2];
-			if(cord[1][0] < x1) {
+			if(cord[1][0] <= x1) {
 				// need to switch points
 				float tempX = cord[1][0];
 				float tempY = cord[1][1];
@@ -194,13 +194,13 @@ int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
 			// check all pixles between (minX, minY) to (maxX, maxY)
 			int cnt=0;
 			float z=0;
+			GzEdge e1, e2;
 			for(int j = (minY) ; j < ceil(maxY); j++) {
 				for(int i = (minX) ; i < ceil(maxX) ; i++) {
 					if((int)substitute(i, j, A[0], B[0], C[0]) <= 0 && 
 						(int)substitute(i, j, A[1], B[1], C[1]) <= 0 &&
 						(int)substitute(i, j, A[2], B[2], C[2]) <= 0) {
 							if(cnt == 0) {
-								GzEdge e1, e2;
 								e1.pt1[0] = cord[0][0];
 								e1.pt1[1] = cord[0][1];
 								e1.pt1[2] = cord[0][2];
@@ -215,38 +215,38 @@ int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
 								e2.pt2[2] = cord[2][2];
 								z = interpolateZ(e1, e2, i, j);
 							}
+							z = (interpolateZ(e1, e2, i, j));
 							if(display->fbuf[ARRAY(i, j)].z == 0 || (z) <= (display->fbuf[ARRAY(i, j)].z)) {
-								if(leftEdge == 1 && (int)substitute(i, j, A[1], B[1], C[1]) <= 0 && 
+								if(leftEdge == 1 && (int)substitute(i, j, A[1], B[1], C[1]) < 0 && 
 									(int)substitute(i, j, A[2], B[2], C[2]) <= 0 && 
 									(int)substitute(i, j, A[0], B[0], C[0]) < 0) {
 									
 									display->fbuf[ARRAY(i, j)].red = ctoi(render->flatcolor[0]);
 									display->fbuf[ARRAY(i, j)].green = ctoi(render->flatcolor[1]);
 									display->fbuf[ARRAY(i, j)].blue = ctoi(render->flatcolor[2]);
-									display->fbuf[ARRAY(i, j)].z = ceil(z);
+									display->fbuf[ARRAY(i, j)].z = (z);
 								}
 								else if(leftEdge == 0 && (int)substitute(i, j, A[0], B[0], C[0]) <= 0 && 
 									(int)substitute(i, j, A[1], B[1], C[1]) < 0 && 
-									(int)substitute(i, j, A[2], B[2], C[2]) < 0) {
+									(int)substitute(i, j, A[2], B[2], C[2]) <= 0) {
 									
 									display->fbuf[ARRAY(i, j)].red = ctoi(render->flatcolor[0]);
 									display->fbuf[ARRAY(i, j)].green = ctoi(render->flatcolor[1]);
 									display->fbuf[ARRAY(i, j)].blue = ctoi(render->flatcolor[2]);
-									display->fbuf[ARRAY(i, j)].z = ceil(z);
+									display->fbuf[ARRAY(i, j)].z = (z);
 								}
 								else {
 									display->fbuf[ARRAY(i, j)].red = ctoi(render->flatcolor[0]);
 									display->fbuf[ARRAY(i, j)].green = ctoi(render->flatcolor[1]);
 									display->fbuf[ARRAY(i, j)].blue = ctoi(render->flatcolor[2]);
-									display->fbuf[ARRAY(i, j)].z = ceil(z);
+									display->fbuf[ARRAY(i, j)].z = (z);
 								}
 							}
 							cnt++;
-							//((((render)->display)->fbuf)[ARRAY(j, i)]).red = render->flatcolor[0];
 					}
 				}
 			}
-			if(cnt==0) {
+			/*if(cnt==0) {
 				GzEdge e1, e2;
 				e1.pt1[0] = cord[0][0];
 				e1.pt1[1] = cord[0][1];
@@ -284,7 +284,7 @@ int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
 						}
 					}
 				}
-			}
+			}*/
 		}
 	}
 	return GZ_SUCCESS;
@@ -318,13 +318,27 @@ void calculateLineEquation(GzCoord pt1, GzCoord pt2, float *A, float *B, float *
 
 void calculatePlaneEquation(GzEdge e1, GzEdge e2, float *A, float *B, float *C, float *D) {
 
-	*A = (e1.pt1[1]-e1.pt2[1])*(e2.pt1[2]-e2.pt2[2]) - (e1.pt1[2]-e1.pt1[2])*(e2.pt1[1]-e2.pt2[1]);
+	/**A = (e1.pt1[1]-e1.pt2[1])*(e2.pt1[2]-e2.pt2[2]) - (e1.pt1[2]-e1.pt1[2])*(e2.pt1[1]-e2.pt2[1]);
 	*B = (e1.pt1[0]-e1.pt2[0])*(e2.pt1[2]-e2.pt2[2]) - (e1.pt1[2]-e1.pt2[2])*(e2.pt1[0]-e2.pt2[0]);
 	*C = (e1.pt1[0]-e1.pt2[0])*(e2.pt1[1]-e2.pt2[1]) - (e1.pt1[1]-e1.pt2[1])*(e2.pt1[0]-e2.pt2[0]);
 
 	//AX + BY + CZ + D = 0
 	//D = -AX - BY - CZ
-	*D = -(*A * e1.pt1[0]) - (*B * e1.pt1[1]) - (*C * e1.pt1[2]);
+	*D = -(*A * e1.pt1[0]) - (*B * e1.pt1[1]) - (*C * e1.pt1[2]);*/
+
+	float V1[3], V2[3];
+	V1[0] = e1.pt2[0] - e1.pt1[0];
+	V1[1] = e1.pt2[1] - e1.pt1[1];
+	V1[2] = e1.pt2[2] - e1.pt1[2];
+
+	V2[0] = e2.pt2[0] - e2.pt1[0];
+	V2[1] = e2.pt2[1] - e2.pt1[1];
+	V2[2] = e2.pt2[2] - e2.pt1[2];
+
+	*A = (V1[1]*V2[2]) - (V2[1]*V1[2]);
+	*B = (V1[2]*V2[0]) - (V2[2]*V1[0]);
+	*C = (V1[0]*V2[1]) - (V2[0]*V1[1]);
+	*D = -(*A)*e1.pt2[0] - (*B)*e1.pt2[1] - (*C)*e1.pt2[2];
 }
 int sort(float **cord) {
 	for(int i=0 ; i<3 ; i++) {

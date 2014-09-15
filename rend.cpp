@@ -113,10 +113,18 @@ int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
 				maxX = 255;
 			if(maxY > 255)
 				maxY = 255;
-			if(minX < 0)
-				minX = 0;
+			if(maxX < 0)
+				maxX = 0;
 			if(minY < 0)
 				minY = 0;
+			if(minX < 0)
+				minX = 0;
+			if(minX > 255)
+				minX = 255;
+			if(minY < 0)
+				minY = 0;
+			if(minY > 255)
+				minY = 255;
 			//sort(&cord);
 
 			for(int i=0 ; i<3 ; i++) {
@@ -158,7 +166,7 @@ int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
 			}
 
 			// calculate line equations
-			float A[3], B[3], C[3];
+			float A[3], B[3], C[3], D[3];
 
 			calculateLineEquation(cord[2], cord[0], &A[2], &B[2], &C[2]);
 			//Ax + By + C = 0
@@ -182,15 +190,76 @@ int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
 
 			GzDisplay *display = render->display;
 			// check all pixles between (minX, minY) to (maxX, maxY)
-			for(int i = (int)(minX+0.5) ; i < (int)(maxX+0.5) ; i++) {
-				for(int j = (int)(minY+0.5) ; j < (int)(maxY+0.5); j++) {
+			int cnt=0;
+			float z=0;
+			for(int j = (int)(minY+0.5) ; j < (int)(maxY+0.5); j++) {
+				for(int i = (int)(minX+0.5) ; i < (int)(maxX+0.5) ; i++) {
 					if((int)substitute(i, j, A[0], B[0], C[0]) <= 0 && 
 						(int)substitute(i, j, A[1], B[1], C[1]) <= 0 &&
 						(int)substitute(i, j, A[2], B[2], C[2]) <= 0) {
-							display->fbuf[ARRAY(i, j)].red = ctoi(render->flatcolor[0]);
-							display->fbuf[ARRAY(i, j)].green = ctoi(render->flatcolor[1]);
-							display->fbuf[ARRAY(i, j)].blue = ctoi(render->flatcolor[2]);
+							if(cnt == 0) {
+								GzEdge e1, e2;
+								e1.pt1[0] = cord[0][0];
+								e1.pt1[1] = cord[0][1];
+								e1.pt1[2] = cord[0][2];
+								e1.pt2[0] = cord[1][0];
+								e1.pt2[1] = cord[1][1];
+								e1.pt2[2] = cord[1][2];
+								e2.pt1[0] = cord[1][0];
+								e2.pt1[1] = cord[1][1];
+								e2.pt1[2] = cord[1][2];
+								e2.pt2[0] = cord[2][0];
+								e2.pt2[1] = cord[2][1];
+								e2.pt2[2] = cord[2][2];
+								z = interpolateZ(e1, e2, i, j) + 0.5;
+							}
+							if(display->fbuf[ARRAY(i, j)].z == 0 || (int)z <= display->fbuf[ARRAY(i, j)].z) {
+								display->fbuf[ARRAY(i, j)].red = ctoi(render->flatcolor[0]);
+								display->fbuf[ARRAY(i, j)].green = ctoi(render->flatcolor[1]);
+								display->fbuf[ARRAY(i, j)].blue = ctoi(render->flatcolor[2]);
+								display->fbuf[ARRAY(i, j)].z = (int)(z+0.5);
+							}
+							cnt++;
 							//((((render)->display)->fbuf)[ARRAY(j, i)]).red = render->flatcolor[0];
+					}
+				}
+			}
+			if(cnt==0) {
+				GzEdge e1, e2;
+				e1.pt1[0] = cord[0][0];
+				e1.pt1[1] = cord[0][1];
+				e1.pt1[2] = cord[0][2];
+				e1.pt2[0] = cord[1][0];
+				e1.pt2[1] = cord[1][1];
+				e1.pt2[2] = cord[1][2];
+				e2.pt1[0] = cord[1][0];
+				e2.pt1[1] = cord[1][1];
+				e2.pt1[2] = cord[1][2];
+				e2.pt2[0] = cord[2][0];
+				e2.pt2[1] = cord[2][1];
+				e2.pt2[2] = cord[2][2];
+				if(cord[0][0] == cord[1][0] && cord[1][0] == cord[2][0]) {
+					cord[0][0] += 0.5;
+					for(int j = (int)(minY+0.5) ; j < (int)(maxY+0.5); j++) {
+						z = interpolateZ(e1, e2, cord[0][0], j) + 0.5;
+						if(display->fbuf[ARRAY((int)(cord[0][0]), j)].z == 0 || (int)z <= display->fbuf[ARRAY((int)cord[0][0], j)].z) {
+							display->fbuf[ARRAY((int)cord[0][0], j)].red = ctoi(render->flatcolor[0]);
+							display->fbuf[ARRAY((int)cord[0][0], j)].green = ctoi(render->flatcolor[1]);
+							display->fbuf[ARRAY((int)cord[0][0], j)].blue = ctoi(render->flatcolor[2]);
+							display->fbuf[ARRAY((int)cord[0][0], j)].z = (int)(z+0.5);
+						}
+					}
+				}
+				if((cord[0][1] == cord[1][1]) && (cord[1][1] == cord[2][1])) {
+					cord[1][1] += 0.5;
+					for(int i = (int)(minX+0.5) ; i < (int)(maxX+0.5) ; i++) {
+						z = interpolateZ(e1, e2, i, cord[1][1]) + 0.5;
+						if(display->fbuf[ARRAY(i, (int)cord[1][1])].z == 0 || (int)z <= display->fbuf[ARRAY(i, (int)cord[1][1])].z) {
+							display->fbuf[ARRAY(i,(int)cord[1][1])].red = ctoi(render->flatcolor[0]);
+							display->fbuf[ARRAY(i,(int)cord[1][1])].green = ctoi(render->flatcolor[1]);
+							display->fbuf[ARRAY(i,(int)cord[1][1])].blue = ctoi(render->flatcolor[2]);
+							display->fbuf[ARRAY(i,(int)cord[1][1])].z = (int)(z+0.5);
+						}
 					}
 				}
 			}
@@ -203,6 +272,12 @@ int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
 float substitute(int x, int y, float A, float B, float C) {
 	// AX + BY + C = 0
 	return (A*x + B*y + C);
+}
+
+float interpolateZ(GzEdge e1, GzEdge e2, int i, int j) {
+	float A1, B1, C1, D1;
+	calculatePlaneEquation(e1, e2, &A1, &B1, &C1, &D1);
+	return (-((A1)*i + (B1)*j + D1)/(C1));
 }
 
 short	ctoi(float color)		/* convert float color to GzIntensity short */
@@ -219,6 +294,16 @@ void calculateLineEquation(GzCoord pt1, GzCoord pt2, float *A, float *B, float *
 	*C = (pt2[0] - pt1[0])*pt1[1] - (pt2[1] - pt1[1])*pt1[0];
 }
 
+void calculatePlaneEquation(GzEdge e1, GzEdge e2, float *A, float *B, float *C, float *D) {
+
+	*A = (e1.pt1[1]-e1.pt2[1])*(e2.pt1[2]-e2.pt2[2]) - (e1.pt1[2]-e1.pt1[2])*(e2.pt1[1]-e2.pt2[1]);
+	*B = (e1.pt1[0]-e1.pt2[0])*(e2.pt1[2]-e2.pt2[2]) - (e1.pt1[2]-e1.pt2[2])*(e2.pt1[0]-e2.pt2[0]);
+	*C = (e1.pt1[0]-e1.pt2[0])*(e2.pt1[1]-e2.pt2[1]) - (e1.pt1[1]-e1.pt2[1])*(e2.pt1[0]-e2.pt2[0]);
+
+	//AX + BY + CZ + D = 0
+	//D = -AX - BY - CZ
+	*D = -(*A * e1.pt1[0]) - (*B * e1.pt1[1]) - (*C * e1.pt1[2]);
+}
 int sort(float **cord) {
 	for(int i=0 ; i<3 ; i++) {
 		for(int j=0; j<3 ; j++) {

@@ -47,6 +47,12 @@ typedef struct {			/* define a renderer */
   float		spec;		/* specular power */
   GzTexture		tex_fun;  /* tex_fun(float u, float v, GzColor color) */
 }  GzRender;
+
+typedef struct {
+	GzCoord pt1;
+	GzCoord pt2;
+}GzEdge;
+
 #endif
 
 // Function declaration
@@ -57,3 +63,5 @@ int GzPutAttribute(GzRender	*render, int numAttributes, GzToken	*nameList,
 	GzPointer *valueList);
 int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
 	GzPointer *valueList);
+void calculatePlaneEquation(GzEdge e1, GzEdge e2, float *A, float *B, float *C, float *D);
+float interpolateZ(GzEdge e1, GzEdge e2, int i , int j);

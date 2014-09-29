@@ -23,7 +23,9 @@ int GzRotXMat(float degree, GzMatrix mat)
 		0, sin(rad), cos(rad), 0,
 		0, 0, 0, 1
 	};
-	mat = rot;
+
+	memcpy(mat, rot, sizeof(GzMatrix));
+
 	return GZ_SUCCESS;
 }
 
@@ -43,7 +45,7 @@ int GzRotYMat(float degree, GzMatrix mat)
 		-sin(rad), 0, cos(rad), 0,
 		0, 0, 0, 1 
 	};
-	mat = rot;
+	memcpy(mat, rot, sizeof(GzMatrix));
 	return GZ_SUCCESS;
 }
 
@@ -61,8 +63,10 @@ int GzRotZMat(float degree, GzMatrix mat)
 		cos(rad), -sin(rad), 0, 0,
 		sin(rad), cos(rad), 0, 0,
 		0, 0, 1, 0,
-		0, 0, 0, 1 };
-	mat = rot;
+		0, 0, 0, 1 
+	};
+	
+	memcpy(mat, rot, sizeof(GzMatrix));
 	return GZ_SUCCESS;
 }
 
@@ -78,8 +82,10 @@ int GzTrxMat(GzCoord translate, GzMatrix mat)
 	GzMatrix trans = { 1, 0, 0 , translate[X],
 		0, 1, 0, translate[Y],
 		0, 0, 1, translate[Z],
-		0, 0 ,0, 1};
-	mat = trans;
+		0, 0 ,0, 1
+	};
+	
+	memcpy(mat, trans, sizeof(GzMatrix));
 	return GZ_SUCCESS;
 }
 
@@ -92,11 +98,15 @@ int GzScaleMat(GzCoord scale, GzMatrix mat)
 		return GZ_FAILURE;
 	}
 
-	GzMatrix scaleMat = { scale[X], 0, 0 , 0,
+	GzMatrix scaleMat = { 
+		scale[X], 0, 0 , 0,
 		0, scale[Y], 0, 0,
 		0, 0, scale[Z], 0,
-		0, 0 ,0, 1};
-	mat = scaleMat;
+		0, 0 ,0, 1
+	};
+	
+	memcpy(mat, scaleMat, sizeof(GzMatrix));
+	
 	return GZ_SUCCESS;
 }
 
@@ -185,6 +195,18 @@ int GzBeginRender(GzRender *render)
 		return GZ_FAILURE;
 	}
 
+	int size = (render->display->xres) * (render->display->yres);
+	render->display->fbuf = new GzPixel[size];
+
+	for (int i = 0; i < size; i++)
+	{
+		render->display->fbuf[i].red = 2000;
+		render->display->fbuf[i].green = 2000;
+		render->display->fbuf[i].blue = 2000;
+		render->display->fbuf[i].z = INT_MAX;
+		render->display->fbuf[i].alpha = 0;
+	}
+
 	render->open = 1;
 	render->flatcolor[0] = 4095;
 	render->flatcolor[1] = 4095;
@@ -192,7 +214,7 @@ int GzBeginRender(GzRender *render)
 	//GzInitDisplay(render->display);
 
 	//d = 1/tan(fov/2)
-	float rad = ( render->camera.FOV * (3.141592653/180));
+	float rad = (float)( render->camera.FOV * (3.141592653/180));
 	float d = 1/tan(rad/2);
 	float Xres = render->display->xres;
 	float Yres = render->display->yres;
@@ -229,10 +251,10 @@ int GzBeginRender(GzRender *render)
 		render->camera.position[Z]
 	};
 
-	GzCoord clVector = {
-		cameraVector[X] - lookatVector[X],
-		cameraVector[Y] - lookatVector[Y],
-		cameraVector[Z] - lookatVector[Z]
+	GzCoord clVector  = {
+		lookatVector[X] - cameraVector[X],
+		lookatVector[Y] - cameraVector[Y],
+		lookatVector[Z] - cameraVector[Z]
 	};
 
 	//mag = X^2 + Y^2 + Z^2

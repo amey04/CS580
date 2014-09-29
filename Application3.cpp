@@ -12,6 +12,7 @@
 #include "Gz.h"
 #include "disp.h"
 #include "rend.h"
+#include <string>
 
 #ifdef _DEBUG
 #undef THIS_FILE
@@ -170,57 +171,89 @@ int Application3::Render()
 	/* 
 	* Walk through the list of triangles, set color 
 	* and render each triangle 
-	*/ 
-	i = 0; 
-	while( fscanf(infile, "%s", dummy) == 1) { 	/* read in tri word */
-	    fscanf(infile, "%f %f %f %f %f %f %f %f", 
-		&(vertexList[0][0]), &(vertexList[0][1]),  
-		&(vertexList[0][2]), 
-		&(normalList[0][0]), &(normalList[0][1]), 	
-		&(normalList[0][2]), 
-		&(uvList[0][0]), &(uvList[0][1]) ); 
-	    fscanf(infile, "%f %f %f %f %f %f %f %f", 
-		&(vertexList[1][0]), &(vertexList[1][1]), 	
-		&(vertexList[1][2]), 
-		&(normalList[1][0]), &(normalList[1][1]), 	
-		&(normalList[1][2]), 
-		&(uvList[1][0]), &(uvList[1][1]) ); 
-	    fscanf(infile, "%f %f %f %f %f %f %f %f", 
-		&(vertexList[2][0]), &(vertexList[2][1]), 	
-		&(vertexList[2][2]), 
-		&(normalList[2][0]), &(normalList[2][1]), 	
-		&(normalList[2][2]), 
-		&(uvList[2][0]), &(uvList[2][1]) ); 
+	*/
+#define animate 1
+#ifdef animate
+	for(int degree=0; degree<360; degree+=10) {
+		char filename[40];
+		sprintf(filename, "%s%d%s", "animataion/output", degree, ".ppm");
+		FILE *out = fopen(filename, "wb");
+		GzMatrix rot;
+		GzRotYMat(degree, rot);
+		GzPushMatrix(m_pRender, rot);
 
-	    /* 
-	    * Set up shading attributes for each triangle 
-	    */ 
-	    shade(normalList[0], color);/* shade based on the norm of vert0 */
-	    valueListColor[0] = (GzPointer)color; 
-	    nameListColor[0] = GZ_RGB_COLOR; 
-	    GzPutAttribute(m_pRender, 1, nameListColor, valueListColor); 
+		if( (infile  = fopen( INFILE3 , "r" )) == NULL )
+		{
+			AfxMessageBox( "The input file was not opened\n" );
+			return GZ_FAILURE;
+		}
+#endif
+
+		i = 0; 
+		while( fscanf(infile, "%s", dummy) == 1) { 	/* read in tri word */
+		    fscanf(infile, "%f %f %f %f %f %f %f %f", 
+			&(vertexList[0][0]), &(vertexList[0][1]),  
+			&(vertexList[0][2]), 
+			&(normalList[0][0]), &(normalList[0][1]), 	
+			&(normalList[0][2]), 
+			&(uvList[0][0]), &(uvList[0][1]) ); 
+			fscanf(infile, "%f %f %f %f %f %f %f %f", 
+			&(vertexList[1][0]), &(vertexList[1][1]), 	
+			&(vertexList[1][2]), 
+			&(normalList[1][0]), &(normalList[1][1]), 	
+			&(normalList[1][2]), 
+			&(uvList[1][0]), &(uvList[1][1]) ); 
+			fscanf(infile, "%f %f %f %f %f %f %f %f", 
+			&(vertexList[2][0]), &(vertexList[2][1]), 	
+			&(vertexList[2][2]), 
+			&(normalList[2][0]), &(normalList[2][1]), 	
+			&(normalList[2][2]), 
+			&(uvList[2][0]), &(uvList[2][1]) ); 
+
+			/* 
+			* Set up shading attributes for each triangle 
+			*/ 
+			shade(normalList[0], color);/* shade based on the norm of vert0 */
+		    valueListColor[0] = (GzPointer)color; 
+		    nameListColor[0] = GZ_RGB_COLOR; 
+			GzPutAttribute(m_pRender, 1, nameListColor, valueListColor); 
  
-	     /* 
-	     * Set the value pointers to the first vertex of the 	
-	     * triangle, then feed it to the renderer 
-	     */ 
-	     valueListTriangle[0] = (GzPointer)vertexList; 
-	     GzPutTriangle(m_pRender, 1, nameListTriangle, valueListTriangle); 
-	} 
+			/* 
+			* Set the value pointers to the first vertex of the 	
+			* triangle, then feed it to the renderer 
+			*/ 
+			valueListTriangle[0] = (GzPointer)vertexList; 
+		     GzPutTriangle(m_pRender, 1, nameListTriangle, valueListTriangle); 
+		} 
 
-	GzFlushDisplay2File(outfile, m_pDisplay); 	/* write out or update display to file*/
-	GzFlushDisplay2FrameBuffer(m_pFrameBuffer, m_pDisplay);	// write out or update display to frame buffer
+#ifndef animate
+		GzFlushDisplay2File(outfile, m_pDisplay); 	/* write out or update display to file*/
+		GzFlushDisplay2FrameBuffer(m_pFrameBuffer, m_pDisplay);	// write out or update display to frame buffer
+#endif
 
-	/* 
-	 * Close file
-	 */ 
+#ifdef animate
+		GzFlushDisplay2File(out, m_pDisplay); 	/* write out or update display to file*/
+		GzFlushDisplay2FrameBuffer(m_pFrameBuffer, m_pDisplay);	// write out or update display to frame buffer
+		GzInitDisplay(m_pDisplay);
+		if( fclose( out ) )
+			AfxMessageBox( "The output file was not closed\n" );
+#endif
+	
+		/* 
+		* Close file
+		*/ 
+		if( fclose( infile ) )
+			AfxMessageBox( "The input file was not closed\n" );
 
-	if( fclose( infile ) )
-      AfxMessageBox( "The input file was not closed\n" );
+#ifndef animate
+		if( fclose( outfile ) )
+			AfxMessageBox( "The output file was not closed\n" );
+#endif
 
-	if( fclose( outfile ) )
-      AfxMessageBox( "The output file was not closed\n" );
- 
+#ifdef animate
+	}
+#endif
+
 	if (status) 
 		return(GZ_FAILURE); 
 	else 

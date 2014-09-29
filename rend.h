@@ -73,3 +73,4 @@ int GzRotYMat(float degree, GzMatrix mat);
 int GzRotZMat(float degree, GzMatrix mat);
 int GzTrxMat(GzCoord translate, GzMatrix mat);
 int GzScaleMat(GzCoord scale, GzMatrix mat);
+void multiplyMatrix(GzMatrix a, GzMatrix b, GzMatrix r);

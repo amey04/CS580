@@ -81,9 +81,9 @@ int GzInitDisplay(GzDisplay	*display)
 int GzPutDisplay(GzDisplay *display, int i, int j, GzIntensity r, GzIntensity g, GzIntensity b, GzIntensity a, GzDepth z)
 {
 /* write pixel values into the display */
-	if(i < 0 || i > display->xres || j < 0 || j > display->yres) {
+	/*if(i < 0 || i > display->xres || j < 0 || j > display->yres) {
 		return GZ_FAILURE;
-	}
+	}*/
 	if(r < 0 ) {
 		r = 0;
 	}

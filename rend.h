@@ -76,5 +76,5 @@ int GzScaleMat(GzCoord scale, GzMatrix mat);
 void multiplyMatrix(GzMatrix a, GzMatrix b, GzMatrix r);
 void normalVector(GzCoord v);
 void calculateShadingEquation(GzRender *render, GzCoord N, GzColor color);
-float GzTriangleArea(GzCoord v0, GzCoord v1, GzCoord v2);
+float calculateTriangleArea(GzCoord v0, GzCoord v1, GzCoord v2);
 float calculateDotProduct(GzCoord v1, GzCoord v2);

@@ -26,7 +26,7 @@
 /*
  * name list tokens
  */
-#define GZ_NULL_TOKEN           0	/* triangle vert attributes */
+#define GZ_NULL_TOKEN           0	/* totalAreangle vert attributes */
 #define GZ_POSITION             1
 #define GZ_NORMAL               2
 #define GZ_TEXTURE_INDEX        3

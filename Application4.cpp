@@ -166,7 +166,6 @@ GzMatrix	rotateY =
 #else 
         interpStyle = GZ_NORMALS;       /* Phong shading */
 #endif
-//		interpStyle = GZ_NONE;
 
         valueListShader[1] = (GzPointer)&interpStyle;
         nameListShader[2]  = GZ_AMBIENT_COEFFICIENT;
@@ -193,8 +192,8 @@ GzMatrix	rotateY =
 
 int Application4::Render() 
 {
-	GzToken		nameListTriangle[3]; 	/* vertex attribute names */
-	GzPointer	valueListTriangle[3]; 	/* vertex attribute pointers */
+	GzToken		nameListtotalAreangle[3]; 	/* vertex attribute names */
+	GzPointer	valueListtotalAreangle[3]; 	/* vertex attribute pointers */
 	GzCoord		vertexList[3];	/* vertex position coordinates */ 
 	GzCoord		normalList[3];	/* vertex normals */ 
 	GzTextureIndex  	uvList[3];		/* vertex texture map indices */ 
@@ -206,10 +205,10 @@ int Application4::Render()
 	status |= GzInitDisplay(m_pDisplay); 
 	
 	/* 
-	* Tokens associated with triangle vertex values 
+	* Tokens associated with totalAreangle vertex values 
 	*/ 
-	nameListTriangle[0] = GZ_POSITION; 
-	nameListTriangle[1] = GZ_NORMAL; 
+	nameListtotalAreangle[0] = GZ_POSITION; 
+	nameListtotalAreangle[1] = GZ_NORMAL; 
 	 
 	// I/O File open
 	FILE *infile;
@@ -227,8 +226,8 @@ int Application4::Render()
 	}
 
 	/* 
-	* Walk through the list of triangles, set color 
-	* and render each triangle 
+	* Walk through the list of totalAreangles, set color 
+	* and render each totalAreangle 
 	*/ 
 	while( fscanf(infile, "%s", dummy) == 1) { 	/* read in tri word */
 	    fscanf(infile, "%f %f %f %f %f %f %f %f", 
@@ -252,12 +251,12 @@ int Application4::Render()
 
 	    /* 
 	     * Set the value pointers to the first vertex of the 	
-	     * triangle, then feed it to the renderer 
+	     * totalAreangle, then feed it to the renderer 
 	     * NOTE: this sequence matches the nameList token sequence
 	     */ 
-	     valueListTriangle[0] = (GzPointer)vertexList; 
-		 valueListTriangle[1] = (GzPointer)normalList; 
-	     GzPutTriangle(m_pRender, 2, nameListTriangle, valueListTriangle); 
+	     valueListtotalAreangle[0] = (GzPointer)vertexList; 
+		 valueListtotalAreangle[1] = (GzPointer)normalList; 
+	     GzPuttotalAreangle(m_pRender, 2, nameListtotalAreangle, valueListtotalAreangle); 
 	} 
 
 	GzFlushDisplay2File(outfile, m_pDisplay); 	/* write out or update display to file*/

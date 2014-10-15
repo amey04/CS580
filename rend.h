@@ -34,7 +34,7 @@ typedef struct {			/* define a renderer */
   GzMatrix		Ximage[MATLEVELS];	/* stack of xforms (Xsm) */
   GzMatrix		Xnorm[MATLEVELS];	/* xforms for norms (Xim) */
   GzMatrix		Xsp;		        /* NDC to screen (pers-to-screen) */
-  GzColor		flatcolor;          /* color state for flat shaded triangles */
+  GzColor		flatcolor;          /* color state for flat shaded totalAreangles */
   int			interp_mode;
   int			numlights;
   GzLight		lights[MAX_LIGHTS];
@@ -57,7 +57,7 @@ int GzFreeRender(GzRender *render);
 int GzBeginRender(GzRender	*render);
 int GzPutAttribute(GzRender	*render, int numAttributes, GzToken	*nameList, 
 	GzPointer *valueList);
-int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
+int GzPuttotalAreangle(GzRender *render, int	numParts, GzToken *nameList,
 	GzPointer *valueList);
 void calculatePlaneEquation(GzEdge e1, GzEdge e2, float *A, float *B, float *C, float *D);
 int interpolateZ(GzEdge e1, GzEdge e2, int i , int j);
@@ -74,7 +74,7 @@ int GzRotZMat(float degree, GzMatrix mat);
 int GzTrxMat(GzCoord translate, GzMatrix mat);
 int GzScaleMat(GzCoord scale, GzMatrix mat);
 void multiplyMatrix(GzMatrix a, GzMatrix b, GzMatrix r);
-void normalVector(GzCoord v);
+void normalizeVector(GzCoord v);
 void calculateShadingEquation(GzRender *render, GzCoord N, GzColor color);
-float calculateTriangleArea(GzCoord v0, GzCoord v1, GzCoord v2);
+float calculateTraingleArea(GzCoord v0, GzCoord v1, GzCoord v2);
 float calculateDotProduct(GzCoord v1, GzCoord v2);

@@ -102,7 +102,7 @@ int GzPutDisplay(GzDisplay *display, int i, int j, GzIntensity r, GzIntensity g,
 	if(b > 4095) {
 		b = 4095;
 	}
-/*	if(a < 0 || a > 1 || z < 0 || z > 1) {
+	/*if(a <= 0 || a >= 1 || z <= 0 || z >= 1) {
 		return GZ_FAILURE;
 	}*/
 

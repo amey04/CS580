@@ -505,12 +505,12 @@ int GzPutAttribute(GzRender	*render, int numAttributes, GzToken	*nameList,
 	return GZ_SUCCESS;
 }
 
-int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
+int GzPuttotalAreangle(GzRender *render, int	numParts, GzToken *nameList,
 	GzPointer *valueList) 
 /* numParts - how many names and values */
 {
 /* 
-- pass in a triangle description with tokens and values corresponding to
+- pass in a totalAreangle description with tokens and values corresponding to
       GZ_NULL_TOKEN:		do nothing - no values
       GZ_POSITION:		3 vert positions in model space
 - Invoke the scan converter and return an error code
@@ -530,9 +530,7 @@ int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
 		memcpy(temp, result, sizeof(GzMatrix));
 	}
 	memcpy(Xn, render->Xnorm[render->matlevel], sizeof(GzMatrix));
-//	memcpy(Xn, temp, sizeof(GzMatrix));
 
-	bool behindViewPlane = false;
 	int i;
 	GzCoord cord[3];
 	GzCoord xformNorm[3];
@@ -573,14 +571,9 @@ int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
 				cord[index][X] /= w;
 				cord[index][Y] /= w;
 				cord[index][Z] /= w;
-
-				if(cord[index][Z] < render->camera.position[Z]) {
-					behindViewPlane = true;
-				}
 			}
 		}
 		else if(nameList[i] == GZ_NORMAL) {
-			//GzCoord *normals = (GzCoord*)valueList[i];
 			GzCoord normals[3];
 			normals[0][0] = *((float*)valueList[i]);
 			normals[0][1] = *(((float*)valueList[i])+1);
@@ -592,201 +585,186 @@ int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
 			normals[2][1] = *(((float*)valueList[i])+7);
 			normals[2][2] = *(((float*)valueList[i])+8);
 			
-			normalVector(normals[0]);
-			normalVector(normals[1]);
-			normalVector(normals[2]);
 			for(int j=0 ; j<3 ; j++) {
 				xformNorm[j][X] = Xn[0][0]*normals[j][X] + Xn[0][1]*normals[j][Y] + Xn[0][2]*normals[j][Z] ;
 				xformNorm[j][Y] = Xn[1][0]*normals[j][X] + Xn[1][1]*normals[j][Y] + Xn[1][2]*normals[j][Z] ;
 				xformNorm[j][Z] = Xn[2][0]*normals[j][X] + Xn[2][1]*normals[j][Y] + Xn[2][2]*normals[j][Z] ;
-				normalVector(xformNorm[j]);
+				normalizeVector(xformNorm[j]);
 			}
-/*
-			memcpy(xformNorm[0], normals[0], sizeof(GzCoord));
-			memcpy(xformNorm[1], normals[1], sizeof(GzCoord));
-			memcpy(xformNorm[2], normals[2], sizeof(GzCoord));
-*/
 		}
 	}
 
-	if(!behindViewPlane) {
-			//find min, max X & Y
-			float maxX=-1, maxY=-1, minX=MAXXRES+1, minY=MAXYRES+1;
-			for(int i=0 ; i<3 ; i++) {
-				if(cord[i][0] < minX)
-					minX = cord[i][0];
-				if(cord[i][0] > maxX)
-					maxX = cord[i][0];
-				if(cord[i][1] < minY)
-					minY = cord[i][1];
-				if(cord[i][1] > maxY)
-					maxY = cord[i][1];
+	//find min, max X & Y
+	float maxX=-1, maxY=-1, minX=MAXXRES+1, minY=MAXYRES+1;
+	for(int i=0 ; i<3 ; i++) {
+		if(cord[i][0] < minX)
+			minX = cord[i][0];
+		if(cord[i][0] > maxX)
+			maxX = cord[i][0];
+		if(cord[i][1] < minY)
+			minY = cord[i][1];
+		if(cord[i][1] > maxY)
+			maxY = cord[i][1];
+	}
+			
+	if(maxX > 255) 
+		maxX = 256;
+	if(maxY > 255)
+		maxY = 256;
+	if(maxX < 0)
+		maxX = 0;
+	if(minY < 0)
+		minY = 0;
+	if(minX < 0)
+		minX = 0;
+	if(minX > 255)
+		minX = 256;
+	if(minY < 0)
+		minY = 0;
+	if(minY > 255)
+		minY = 256;
+			
+	for(int i=0 ; i<3 ; i++) {
+		for(int j=0; j<3 ; j++) {
+			if(cord[i][1] < cord[j][1] || (cord[i][1] == cord[j][1] && cord[i][0] < cord[j][0])) {
+				float tempX = cord[i][0];
+				float tempY = cord[i][1];
+				float tempZ = cord[i][2];
+				float tempNX = xformNorm[i][X];
+				float tempNY = xformNorm[i][Y];
+				float tempNZ = xformNorm[i][Z];
+				cord[i][0] = cord[j][0];
+				cord[i][1] = cord[j][1];
+				cord[i][2] = cord[j][2];
+				xformNorm[i][X] = xformNorm[j][X];
+				xformNorm[i][Y] = xformNorm[j][Y];
+				xformNorm[i][Z] = xformNorm[j][Z];
+				cord[j][0] = tempX;
+				cord[j][1] = tempY;
+				cord[j][2] = tempZ;
+				xformNorm[j][X] = tempNX;
+				xformNorm[j][Y] = tempNY;
+				xformNorm[j][Z] = tempNZ;
 			}
+		}
+	}
+
+	// calculate line equations
+	float A[3], B[3], C[3], D[3];
+
+	calculateLineEquation(cord[2], cord[0], &A[2], &B[2], &C[2]);
+	//Ax + By + C = 0
+	//x = (-C - By)/A
+	int leftEdge = 0;
+	float x1 = (-C[2] - B[2]*cord[1][1])/A[2];
+	if(cord[1][0] <= x1) {
+		// need to switch points
+		float tempX = cord[1][0];
+		float tempY = cord[1][1];
+		float tempZ = cord[1][2];
+		float tempNX = xformNorm[1][X];
+		float tempNY = xformNorm[1][Y];
+		float tempNZ = xformNorm[1][Z];
+		cord[1][0] = cord[2][0];
+		cord[1][1] = cord[2][1];
+		cord[1][2] = cord[2][2];
+		xformNorm[1][X] = xformNorm[2][X];
+		xformNorm[1][Y] = xformNorm[2][Y];
+		xformNorm[1][Z] = xformNorm[2][Z];
+		cord[2][0] = tempX;
+		cord[2][1] = tempY;
+		cord[2][2] = tempZ;
+		xformNorm[2][X] = tempNX;
+		xformNorm[2][Y] = tempNY;
+		xformNorm[2][Z] = tempNZ;
+		leftEdge++;
+	}
+	calculateLineEquation(cord[0], cord[1], &A[0], &B[0], &C[0]);
+	calculateLineEquation(cord[1], cord[2], &A[1], &B[1], &C[1]);
+	calculateLineEquation(cord[2], cord[0], &A[2], &B[2], &C[2]);
+
+	//solve shading equation to get colors for 3 vertices of totalAreangle 
+	GzColor col1, col2, col3;
+	calculateShadingEquation(render, xformNorm[0], col1);
+	calculateShadingEquation(render, xformNorm[1], col2);
+	calculateShadingEquation(render, xformNorm[2], col3);
+
+	float totalArea = calculateTraingleArea(cord[0], cord[1], cord[2]);
+
+	GzDisplay *display = render->display;
+	GzEdge e1, e2;
+	e1.pt1[0] = cord[0][0];
+	e1.pt1[1] = cord[0][1];
+	e1.pt1[2] = cord[0][2];
+	e1.pt2[0] = cord[1][0];
+	e1.pt2[1] = cord[1][1];
+	e1.pt2[2] = cord[1][2];
+	e2.pt1[0] = cord[1][0];
+	e2.pt1[1] = cord[1][1];
+	e2.pt1[2] = cord[1][2];
+	e2.pt2[0] = cord[2][0];
+	e2.pt2[1] = cord[2][1];
+	e2.pt2[2] = cord[2][2];
 			
-			if(maxX > 255) 
-				maxX = 256;
-			if(maxY > 255)
-				maxY = 256;
-			if(maxX < 0)
-				maxX = 0;
-			if(minY < 0)
-				minY = 0;
-			if(minX < 0)
-				minX = 0;
-			if(minX > 255)
-				minX = 256;
-			if(minY < 0)
-				minY = 0;
-			if(minY > 255)
-				minY = 256;
-			
-			for(int i=0 ; i<3 ; i++) {
-				for(int j=0; j<3 ; j++) {
-					if(cord[i][1] < cord[j][1] || (cord[i][1] == cord[j][1] && cord[i][0] < cord[j][0])) {
-					//if(cord[j][1] < cord[j+1][1] || (cord[j][1] == cord[j+1][1] && cord[j][0] < cord[j+1][0])) {
-						float tempX = cord[i][0];
-						float tempY = cord[i][1];
-						float tempZ = cord[i][2];
-						float tempNX = xformNorm[i][X];
-						float tempNY = xformNorm[i][Y];
-						float tempNZ = xformNorm[i][Z];
-						cord[i][0] = cord[j][0];
-						cord[i][1] = cord[j][1];
-						cord[i][2] = cord[j][2];
-						xformNorm[i][X] = xformNorm[j][X];
-						xformNorm[i][Y] = xformNorm[j][Y];
-						xformNorm[i][Z] = xformNorm[j][Z];
-						cord[j][0] = tempX;
-						cord[j][1] = tempY;
-						cord[j][2] = tempZ;
-						xformNorm[j][X] = tempNX;
-						xformNorm[j][Y] = tempNY;
-						xformNorm[j][Z] = tempNZ;
-					}
+	// check all pixles between (minX, minY) to (maxX, maxY)
+	int cnt=0;
+	GzDepth z=0;
+	float r,g,b;
+	for(int i = floor(minX) ; i < ceil(maxX) ; i++) {
+		for(int j = floor(minY) ; j < ceil(maxY); j++) {
+			if((substitute(i, j, A[0], B[0], C[0]) <= 0 && 
+				substitute(i, j, A[1], B[1], C[1]) <= 0 &&
+				substitute(i, j, A[2], B[2], C[2]) <= 0)){
+					z = (interpolateZ(e1, e2, i, j));
+					GzCoord position = {i, j, 1};
+					if(display->fbuf[ARRAY(i, j)].z == 0 || (z) < (display->fbuf[ARRAY(i, j)].z)) {
+						//caclculate relative area of traingle
+						float area1 = calculateTraingleArea(cord[1], position, cord[2]);
+						float area2 = calculateTraingleArea(cord[0], position, cord[2]);
+						float area3 = calculateTraingleArea(cord[0], position, cord[1]);
+						if(render->interp_mode == GZ_COLOR) {	
+							r = (area1*col1[0] + area2*col2[0] + area3*col3[0]) / totalArea;
+						    g = (area1*col1[1] + area2*col2[1] + area3*col3[1]) / totalArea;
+							b = (area1*col1[2] + area2*col2[2] + area3*col3[2]) / totalArea;
+
+							if (r > 1.0) r = 1.0;
+							if(r < 0) r = 0;
+							if (g > 1.0) g = 1.0;
+							if(g < 0) g = 0;
+							if (b > 1.0) b = 1.0;
+							if(b < 0) b = 0;
+						}
+						else if(render->interp_mode == GZ_NORMAL) {
+							GzCoord normal;
+							//calculate normal to this pixle
+							normal[X] = area1*xformNorm[0][X] + area2*xformNorm[1][X] + area3*xformNorm[2][X];
+							normal[Y] = area1*xformNorm[0][Y] + area2*xformNorm[1][Y] + area3*xformNorm[2][Y];
+							normal[Z] = area1*xformNorm[0][Z] + area2*xformNorm[1][Z] + area3*xformNorm[2][Z];
+							normalizeVector(normal);
+
+							GzColor c;
+							calculateShadingEquation(render, normal, c);
+							if (c[0] > 1.0) c[0] = 1.0;
+							if(c[0] < 0) c[0] = 0;
+							if (c[1] > 1.0) c[1] = 1.0;
+							if(c[1] < 0) c[1] = 0;
+							if (c[2] > 1.0) c[2] = 1.0;
+							if(c[2] < 0) c[2] = 0;
+
+							r = c[0];
+							g = c[1];
+							b = c[2];
+						}
+						else {
+							r = render->flatcolor[0];
+							g = render->flatcolor[1];
+							b = render->flatcolor[2];
+						}
+						GzPutDisplay(display, i, j, ctoi(r), ctoi(g), ctoi(b), 1, z);
 				}
+			cnt++;
 			}
-
-			// calculate line equations
-			float A[3], B[3], C[3], D[3];
-
-			calculateLineEquation(cord[2], cord[0], &A[2], &B[2], &C[2]);
-			//Ax + By + C = 0
-			//x = (-C - By)/A
-			int leftEdge = 0;
-			float x1 = (-C[2] - B[2]*cord[1][1])/A[2];
-			if(cord[1][0] <= x1) {
-				// need to switch points
-				float tempX = cord[1][0];
-				float tempY = cord[1][1];
-				float tempZ = cord[1][2];
-				float tempNX = xformNorm[1][X];
-				float tempNY = xformNorm[1][Y];
-				float tempNZ = xformNorm[1][Z];
-				cord[1][0] = cord[2][0];
-				cord[1][1] = cord[2][1];
-				cord[1][2] = cord[2][2];
-				xformNorm[1][X] = xformNorm[2][X];
-				xformNorm[1][Y] = xformNorm[2][Y];
-				xformNorm[1][Z] = xformNorm[2][Z];
-				cord[2][0] = tempX;
-				cord[2][1] = tempY;
-				cord[2][2] = tempZ;
-				xformNorm[2][X] = tempNX;
-				xformNorm[2][Y] = tempNY;
-				xformNorm[2][Z] = tempNZ;
-				leftEdge++;
-			}
-			calculateLineEquation(cord[0], cord[1], &A[0], &B[0], &C[0]);
-			calculateLineEquation(cord[1], cord[2], &A[1], &B[1], &C[1]);
-			calculateLineEquation(cord[2], cord[0], &A[2], &B[2], &C[2]);
-
-			//remove
-			GzColor colorV0, colorV1, colorV2;
-			calculateShadingEquation(render, xformNorm[0], colorV0);
-			calculateShadingEquation(render, xformNorm[1], colorV1);
-			calculateShadingEquation(render, xformNorm[2], colorV2);
-			float triA = calculateTriangleArea(cord[0], cord[1], cord[2]);
-			//
-
-			GzDisplay *display = render->display;
-			GzEdge e1, e2;
-			e1.pt1[0] = cord[0][0];
-			e1.pt1[1] = cord[0][1];
-			e1.pt1[2] = cord[0][2];
-			e1.pt2[0] = cord[1][0];
-			e1.pt2[1] = cord[1][1];
-			e1.pt2[2] = cord[1][2];
-			e2.pt1[0] = cord[1][0];
-			e2.pt1[1] = cord[1][1];
-			e2.pt1[2] = cord[1][2];
-			e2.pt2[0] = cord[2][0];
-			e2.pt2[1] = cord[2][1];
-			e2.pt2[2] = cord[2][2];
-			
-			// check all pixles between (minX, minY) to (maxX, maxY)
-			int cnt=0;
-			GzDepth z=0;
-			for(int i = floor(minX) ; i < ceil(maxX) ; i++) {
-				for(int j = floor(minY) ; j < ceil(maxY); j++) {
-					if((substitute(i, j, A[0], B[0], C[0]) <= 0 && 
-						substitute(i, j, A[1], B[1], C[1]) <= 0 &&
-						substitute(i, j, A[2], B[2], C[2]) <= 0) /*||  (substitute(i, j, A[0], B[0], C[0]) >= 0 && 
-						substitute(i, j, A[1], B[1], C[1]) >= 0 &&
-						substitute(i, j, A[2], B[2], C[2]) >= 0*/){
-							z = (interpolateZ(e1, e2, i, j));
-							GzCoord position = {i, j, 1};
-							if(display->fbuf[ARRAY(i, j)].z == 0 || (z) < (display->fbuf[ARRAY(i, j)].z)) {
-								float area1 = calculateTriangleArea(cord[1], position, cord[2]);
-								float area2 = calculateTriangleArea(cord[0], position, cord[2]);
-								float area3 = calculateTriangleArea(cord[0], position, cord[1]);
-								if(render->interp_mode == GZ_COLOR) {	
-									float rf = (area1*colorV0[0] + area2*colorV1[0] + area3*colorV2[0]) / triA;
-									float gf = (area1*colorV0[1] + area2*colorV1[1] + area3*colorV2[1]) / triA;
-									float bf = (area1*colorV0[2] + area2*colorV1[2] + area3*colorV2[2]) / triA;
-									if (rf > 1.0) rf = 1.0;
-									if(rf < 0) rf = 0;
-									if (gf > 1.0) gf = 1.0;
-									if(gf < 0) gf = 0;
-									if (bf > 1.0) bf = 1.0;
-									if(bf < 0) bf = 0;
-		
-									display->fbuf[ARRAY(i, j)].red = ctoi(rf);
-									display->fbuf[ARRAY(i, j)].green = ctoi(gf);
-									display->fbuf[ARRAY(i, j)].blue = ctoi(bf);
-									display->fbuf[ARRAY(i, j)].z = (z);
-								}
-								else if(render->interp_mode == GZ_NORMAL) {
-									GzCoord normal;
-									normal[X] = area1*xformNorm[0][X] + area2*xformNorm[1][X] + area3*xformNorm[2][X];
-									normal[Y] = area1*xformNorm[0][Y] + area2*xformNorm[1][Y] + area3*xformNorm[2][Y];
-									normal[Z] = area1*xformNorm[0][Z] + area2*xformNorm[1][Z] + area3*xformNorm[2][Z];
-									normalVector(normal);
-
-									GzColor c;
-									calculateShadingEquation(render, normal, c);
-									if (c[0] > 1.0) c[0] = 1.0;
-									if(c[0] < 0) c[0] = 0;
-									if (c[1] > 1.0) c[1] = 1.0;
-									if(c[1] < 0) c[1] = 0;
-									if (c[2] > 1.0) c[2] = 1.0;
-									if(c[2] < 0) c[2] = 0;
-									display->fbuf[ARRAY(i, j)].red = ctoi(c[0]);
-									display->fbuf[ARRAY(i, j)].green = ctoi(c[1]);
-									display->fbuf[ARRAY(i, j)].blue = ctoi(c[2]);
-									display->fbuf[ARRAY(i, j)].z = (z);
-								}
-								else {
-									display->fbuf[ARRAY(i, j)].red = ctoi(render->flatcolor[0]);
-									display->fbuf[ARRAY(i, j)].green = ctoi(render->flatcolor[1]);
-									display->fbuf[ARRAY(i, j)].blue = ctoi(render->flatcolor[2]);
-									display->fbuf[ARRAY(i, j)].z = (z);
-								}
-							}
-							cnt++;
-					}
-				}
-			}
-		//}
+		}
 	}
 	return GZ_SUCCESS;
 }
@@ -859,7 +837,7 @@ void multiplyMatrix(GzMatrix a, GzMatrix b, GzMatrix r) {
     }
 }
 
-void normalVector(GzCoord v) {
+void normalizeVector(GzCoord v) {
 	float factor = sqrt(v[X]*v[X] + v[Y]*v[Y] + v[Z]*v[Z]);
 	v[X] /= factor;
 	v[Y] /= factor;
@@ -878,27 +856,14 @@ void calculateShadingEquation(GzRender *render, GzCoord N, GzColor color) {
 	 * L light ray direction vec
 	 **/
 
-	//Normalize vector
-	normalVector(N);
-
 	//E- eye vector constant
 	GzCoord E;
-	/*E[X] = render->camera.position[X];
-	E[Y] = render->camera.position[Y];
-	E[Z] = render->camera.position[Z];*/
 	E[X] = 0;
 	E[Y] = 0;
 	E[Z] = -1;
 
-
 	// calculate N.L and N.E
 	float NdotE = calculateDotProduct(N, E);
-
-	// to check if light contributes 
-	// 1 - both +ve
-	// 2 - both -ve
-	// 3 - one +ve one -ve
-	int checkLight[MAX_LIGHTS];
 	GzCoord R[MAX_LIGHTS];
 
 	GzCoord Nin;
@@ -906,79 +871,69 @@ void calculateShadingEquation(GzRender *render, GzCoord N, GzColor color) {
 	Nin[Y] = -N[Y];
 	Nin[Z] = -N[Z];
 
+	GzColor termA, termB;
+	termA[0] = termA[1] = termA[2] = 0;
+	termB[0] = termB[1] = termB[2] = 0;
+
 	for(int i=0 ; i<render->numlights ; i++) {
 		float NdotL = calculateDotProduct(N, render->lights[i].direction);
-		float NdotLprime = calculateDotProduct(Nin, render->lights[i].direction);
+		
 		// check if NdotE and NdotL are both of same sign otherwise ingnore
 		// calculate R as 2(N.L)N-L
 		if(NdotL > 0 && NdotE > 0) {
 			R[i][X] = (2*NdotL) * N[X] - render->lights[i].direction[X];
 			R[i][Y] = (2*NdotL) * N[Y] - render->lights[i].direction[Y];
 			R[i][Z] = (2*NdotL) * N[Z] - render->lights[i].direction[Z];
-			normalVector(R[i]);
-			checkLight[i] = 1;
-		}
-		else if(NdotE < 0 && NdotL < 0) {//negate normal vector
-			R[i][X] = (2*NdotLprime) * (-N[X]) - render->lights[i].direction[X];
-			R[i][Y] = (2*NdotLprime) * (-N[Y]) - render->lights[i].direction[Y];
-			R[i][Z] = (2*NdotLprime) * (-N[Z]) - render->lights[i].direction[Z];
-			normalVector(R[i]);
-			checkLight[i] = 2;
-		}
-		else { //ignore this case
-			checkLight[i] = 3;
-		}
-	}
+			normalizeVector(R[i]);
 
-	//sum lights only if checkLight is 1 or 2
-	// termA - (Ks sum[le ( R.E)s])
-	GzColor sum;
-	sum[0] = sum[1] = sum[2] = 0;
-
-	for(int i=0 ; i<render->numlights ; i++) {
-		if(checkLight[i] == 1 || checkLight[i] == 2) {
 			float RdotE = calculateDotProduct(R[i], E);
-			//bound between 0-1
 			if(RdotE > 1.0)
 				RdotE = 1.0;
 			else if(RdotE < 0.0)
 				RdotE = 0.0;
-			//add to sum
-			sum[0] += render->lights[i].color[0] * pow(RdotE, render->spec);
-			sum[1] += render->lights[i].color[1] * pow(RdotE, render->spec);
-			sum[2] += render->lights[i].color[2] * pow(RdotE, render->spec);
+			termA[0] += render->lights[i].color[0] * pow(RdotE, render->spec);
+			termA[1] += render->lights[i].color[1] * pow(RdotE, render->spec);
+			termA[2] += render->lights[i].color[2] * pow(RdotE, render->spec);
+
+			//term b
+			termB[0] += render->lights[i].color[0] * calculateDotProduct(N, render->lights[i].direction);
+			termB[1] += render->lights[i].color[1] * calculateDotProduct(N, render->lights[i].direction);
+			termB[2] += render->lights[i].color[2] * calculateDotProduct(N, render->lights[i].direction);
+
+		}
+		else if(NdotE < 0 && NdotL < 0) {//negate normal vector
+			R[i][X] = (2*NdotL) * (-N[X]) - render->lights[i].direction[X];
+			R[i][Y] = (2*NdotL) * (-N[Y]) - render->lights[i].direction[Y];
+			R[i][Z] = (2*NdotL) * (-N[Z]) - render->lights[i].direction[Z];
+			normalizeVector(R[i]);
+
+			float RdotE = calculateDotProduct(R[i], E);
+			if(RdotE > 1.0)
+				RdotE = 1.0;
+			else if(RdotE < 0.0)
+				RdotE = 0.0;
+			termA[0] += render->lights[i].color[0] * pow(RdotE, render->spec);
+			termA[1] += render->lights[i].color[1] * pow(RdotE, render->spec);
+			termA[2] += render->lights[i].color[2] * pow(RdotE, render->spec);
+
+			//term B
+			termB[0] += render->lights[i].color[0] * calculateDotProduct(Nin, render->lights[i].direction);
+			termB[1] += render->lights[i].color[1] * calculateDotProduct(Nin, render->lights[i].direction);
+			termB[2] += render->lights[i].color[2] * calculateDotProduct(Nin, render->lights[i].direction);
 		}
 	}
-	//multiply by Ks
-	GzColor termA;
-	termA[0] = render->Ks[0] * sum[0];
-	termA[1] = render->Ks[1] * sum[1];
-	termA[2] = render->Ks[2] * sum[2];
 
-	// termB -- (Kd sum[le (N.L)]
-	sum[0] = sum[1] = sum[2] = 0;
-	for(int i=0 ; i<render->numlights ; i++) {
-		if(checkLight[i] == 1) {
-			sum[0] += render->lights[i].color[0] * calculateDotProduct(N, render->lights[i].direction);
-			sum[1] += render->lights[i].color[1] * calculateDotProduct(N, render->lights[i].direction);
-			sum[2] += render->lights[i].color[2] * calculateDotProduct(N, render->lights[i].direction);
-		}
-		else if(checkLight[i] == 2) {
-			GzCoord inverseN;
-			inverseN[X] = -N[X];
-			inverseN[Y] = -N[Y];
-			inverseN[Z] = -N[Z];
-			sum[0] += render->lights[i].color[0] * calculateDotProduct(inverseN, render->lights[i].direction);
-			sum[1] += render->lights[i].color[1] * calculateDotProduct(inverseN, render->lights[i].direction);
-			sum[2] += render->lights[i].color[2] * calculateDotProduct(inverseN, render->lights[i].direction);
-		}
-	}
-	GzColor termB;
-	termB[0] = render->Kd[0] * sum[0];
-	termB[1] = render->Kd[1] * sum[1];
-	termB[2] = render->Kd[2] * sum[2];
+	//termA - multiply by Ks
+	termA[0] *= render->Ks[0];
+	termA[1] *= render->Ks[1];
+	termA[2] *= render->Ks[2];
 
-	// termC -- (Ka la)
+	//termB - multiply by Kd
+	termB[0] *= render->Kd[0];
+	termB[1] *= render->Kd[1];
+	termB[2] *= render->Kd[2];
+
+	//termC -- (Ka la)
 	GzColor termC;
 	termC[0] = render->Ka[0] * render->ambientlight.color[0];
 	termC[1] = render->Ka[1] * render->ambientlight.color[1];
@@ -990,7 +945,7 @@ void calculateShadingEquation(GzRender *render, GzCoord N, GzColor color) {
 	color[2] = termA[2] + termB[2] + termC[2];
 }
 
-float calculateTriangleArea(GzCoord v0, GzCoord v1, GzCoord v2) {
+float calculateTraingleArea(GzCoord v0, GzCoord v1, GzCoord v2) {
 	return abs(.5 * (v0[X]*v1[Y] + v0[Y]*v2[X] + v1[X]*v2[Y] - v1[Y]*v2[X] - v0[Y]*v1[X] - v0[X]*v2[Y]));
 }
 

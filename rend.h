@@ -78,3 +78,4 @@ void normalizeVector(GzCoord v);
 void calculateShadingEquation(GzRender *render, GzCoord N, GzColor color);
 float calculateTraingleArea(GzCoord v0, GzCoord v1, GzCoord v2);
 float calculateDotProduct(GzCoord v1, GzCoord v2);
+void shade(GzCoord norm, GzCoord color);

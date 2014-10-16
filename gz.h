@@ -58,6 +58,7 @@
 /* select interpolation mode of the shader (either one - not both) */
 #define	GZ_COLOR			1	/* interpolate vertex color */
 #define	GZ_NORMALS			2	/* interpolate normals */
+#define GZ_FLAT				0
 
 typedef int     GzRenderClass;
 typedef int     GzDisplayClass;

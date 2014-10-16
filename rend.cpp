@@ -534,6 +534,7 @@ int GzPuttotalAreangle(GzRender *render, int	numParts, GzToken *nameList,
 	int i;
 	GzCoord cord[3];
 	GzCoord xformNorm[3];
+	GzCoord normals[3];
 
 	for(i = 0; i < numParts ; i++) {
 		if(nameList[i] == GZ_POSITION) {
@@ -574,7 +575,6 @@ int GzPuttotalAreangle(GzRender *render, int	numParts, GzToken *nameList,
 			}
 		}
 		else if(nameList[i] == GZ_NORMAL) {
-			GzCoord normals[3];
 			normals[0][0] = *((float*)valueList[i]);
 			normals[0][1] = *(((float*)valueList[i])+1);
 			normals[0][2] = *(((float*)valueList[i])+2);
@@ -685,9 +685,17 @@ int GzPuttotalAreangle(GzRender *render, int	numParts, GzToken *nameList,
 
 	//solve shading equation to get colors for 3 vertices of totalAreangle 
 	GzColor col1, col2, col3;
-	calculateShadingEquation(render, xformNorm[0], col1);
-	calculateShadingEquation(render, xformNorm[1], col2);
-	calculateShadingEquation(render, xformNorm[2], col3);
+	if(render->interp_mode == GZ_COLOR || render->interp_mode == GZ_NORMAL) {
+		calculateShadingEquation(render, xformNorm[0], col1);
+		calculateShadingEquation(render, xformNorm[1], col2);
+		calculateShadingEquation(render, xformNorm[2], col3);
+	}
+	else {
+		shade(normals[0], col1);
+		render->flatcolor[0] = col1[0];
+		render->flatcolor[1] = col1[1];
+		render->flatcolor[2] = col1[2];
+	}
 
 	float totalArea = calculateTraingleArea(cord[0], cord[1], cord[2]);
 
@@ -722,19 +730,7 @@ int GzPuttotalAreangle(GzRender *render, int	numParts, GzToken *nameList,
 						float area1 = calculateTraingleArea(cord[1], position, cord[2]);
 						float area2 = calculateTraingleArea(cord[0], position, cord[2]);
 						float area3 = calculateTraingleArea(cord[0], position, cord[1]);
-						if(render->interp_mode == GZ_COLOR) {	
-							r = (area1*col1[0] + area2*col2[0] + area3*col3[0]) / totalArea;
-						    g = (area1*col1[1] + area2*col2[1] + area3*col3[1]) / totalArea;
-							b = (area1*col1[2] + area2*col2[2] + area3*col3[2]) / totalArea;
-
-							if (r > 1.0) r = 1.0;
-							if(r < 0) r = 0;
-							if (g > 1.0) g = 1.0;
-							if(g < 0) g = 0;
-							if (b > 1.0) b = 1.0;
-							if(b < 0) b = 0;
-						}
-						else if(render->interp_mode == GZ_NORMAL) {
+						if(render->interp_mode == GZ_NORMAL) {
 							GzCoord normal;
 							//calculate normal to this pixle
 							normal[X] = area1*xformNorm[0][X] + area2*xformNorm[1][X] + area3*xformNorm[2][X];
@@ -744,22 +740,34 @@ int GzPuttotalAreangle(GzRender *render, int	numParts, GzToken *nameList,
 
 							GzColor c;
 							calculateShadingEquation(render, normal, c);
-							if (c[0] > 1.0) c[0] = 1.0;
-							if(c[0] < 0) c[0] = 0;
-							if (c[1] > 1.0) c[1] = 1.0;
-							if(c[1] < 0) c[1] = 0;
-							if (c[2] > 1.0) c[2] = 1.0;
-							if(c[2] < 0) c[2] = 0;
 
 							r = c[0];
 							g = c[1];
 							b = c[2];
 						}
-						else {
+						else if(render->interp_mode == GZ_COLOR) {	
+							//interpolate r,g,b values using weighted area method
+							r = (area1*col1[0] + area2*col2[0] + area3*col3[0]) / totalArea;
+						    g = (area1*col1[1] + area2*col2[1] + area3*col3[1]) / totalArea;
+							b = (area1*col1[2] + area2*col2[2] + area3*col3[2]) / totalArea;
+						}
+						else { //flat shading
 							r = render->flatcolor[0];
 							g = render->flatcolor[1];
 							b = render->flatcolor[2];
 						}
+						if (r > 1.0) 
+							r = 1.0;
+						if(r < 0) 
+							r = 0;
+						if (g > 1.0) 
+							g = 1.0;
+						if(g < 0) 
+							g = 0;
+						if (b > 1.0) 
+							b = 1.0;
+						if(b < 0) 
+							b = 0;
 						GzPutDisplay(display, i, j, ctoi(r), ctoi(g), ctoi(b), 1, z);
 				}
 			cnt++;
@@ -951,4 +959,22 @@ float calculateTraingleArea(GzCoord v0, GzCoord v1, GzCoord v2) {
 
 float calculateDotProduct(GzCoord v1, GzCoord v2) {
 	return v1[X]*v2[X] + v1[Y]*v2[Y] + v1[Z]*v2[Z];
+}
+
+void shade(GzCoord norm, GzCoord color)
+{
+  GzCoord	light;
+  float		coef;
+
+  light[0] = 0.707f;
+  light[1] = 0.5f;
+  light[2] = 0.5f;
+
+  coef = light[0]*norm[0] + light[1]*norm[1] + light[2]*norm[2];
+  if (coef < 0) 	coef *= -1;
+
+  if (coef > 1.0)	coef = 1.0;
+  color[0] = coef*0.95f;
+  color[1] = coef*0.65f;
+  color[2] = coef*0.88f;
 }

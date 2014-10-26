@@ -1,0 +1,4 @@
+Visual Studio version 2008
+
+For flat shading set "interpStyle = GZ_FLAT;" in Application4.cpp
+

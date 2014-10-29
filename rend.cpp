@@ -209,9 +209,9 @@ int GzBeginRender(GzRender *render)
 	}
 
 	render->open = 1;
-	render->flatcolor[0] = 4095;
-	render->flatcolor[1] = 4095;
-	render->flatcolor[2] = 4095;
+	render->flatcolor[0] = 0;
+	render->flatcolor[1] = 0;
+	render->flatcolor[2] = 0;
 	//GzInitDisplay(render->display);
 
 	//d = 1/tan(fov/2)
@@ -499,7 +499,7 @@ int GzPutAttribute(GzRender	*render, int numAttributes, GzToken	*nameList,
 
 			case GZ_TEXTURE_MAP:
 				{
-				render->tex_fun = *(GzTexture*)valueList[i];
+				render->tex_fun = (GzTexture) valueList[i];
 				break;
 				}
 		}
@@ -606,6 +606,13 @@ int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
 			uvList[1][1] = *(((float*)valueList[i]+3));
 			uvList[2][0] = *(((float*)valueList[i]+4));
 			uvList[2][1] = *(((float*)valueList[i]+5));
+
+			//perspective correction
+			for(int index=0 ; index<3 ; index++) {
+				float fact = (cord[index][Z] / (INT_MAX - cord[index][Z]));
+				uvList[index][0] /= (fact + 1);
+				uvList[index][1] /= (fact + 1);
+			}
 		}
 	}
 
@@ -648,28 +655,26 @@ int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
 				float tempNX = xformNorm[i][X];
 				float tempNY = xformNorm[i][Y];
 				float tempNZ = xformNorm[i][Z];
+				float tempUV0 = uvList[i][0];
+				float tempUV1 = uvList[i][1];
+
 				cord[i][0] = cord[j][0];
 				cord[i][1] = cord[j][1];
 				cord[i][2] = cord[j][2];
 				xformNorm[i][X] = xformNorm[j][X];
 				xformNorm[i][Y] = xformNorm[j][Y];
 				xformNorm[i][Z] = xformNorm[j][Z];
+				uvList[i][0] = uvList[j][0];
+				uvList[i][1] = uvList[j][1];
+
 				cord[j][0] = tempX;
 				cord[j][1] = tempY;
 				cord[j][2] = tempZ;
 				xformNorm[j][X] = tempNX;
 				xformNorm[j][Y] = tempNY;
 				xformNorm[j][Z] = tempNZ;
-
-				/*tempX = cordOrig[i][0];
-				tempY = cordOrig[i][1];
-				tempZ = cordOrig[i][2];
-				cordOrig[i][0] = cordOrig[j][0];
-				cordOrig[i][1] = cordOrig[j][1];
-				cordOrig[i][2] = cordOrig[j][2];
-				cordOrig[j][0] = tempX;
-				cordOrig[j][1] = tempY;
-				cordOrig[j][2] = tempZ;*/
+				uvList[j][0] = tempUV0;
+				uvList[j][1] = tempUV1;
 			}
 		}
 	}
@@ -690,29 +695,26 @@ int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
 		float tempNX = xformNorm[1][X];
 		float tempNY = xformNorm[1][Y];
 		float tempNZ = xformNorm[1][Z];
+		float tempUV0 = uvList[1][0];
+		float tempUV1 = uvList[1][1];
+
 		cord[1][0] = cord[2][0];
 		cord[1][1] = cord[2][1];
 		cord[1][2] = cord[2][2];
 		xformNorm[1][X] = xformNorm[2][X];
 		xformNorm[1][Y] = xformNorm[2][Y];
 		xformNorm[1][Z] = xformNorm[2][Z];
+		uvList[1][0] = uvList[2][0];
+		uvList[1][1] = uvList[2][1];
+
 		cord[2][0] = tempX;
 		cord[2][1] = tempY;
 		cord[2][2] = tempZ;
 		xformNorm[2][X] = tempNX;
 		xformNorm[2][Y] = tempNY;
 		xformNorm[2][Z] = tempNZ;
-
-		/*tempX = cordOrig[1][0];
-		tempY = cordOrig[1][1];
-		tempZ = cordOrig[1][2];
-		cordOrig[1][0] = cordOrig[2][0];
-		cordOrig[1][1] = cordOrig[2][1];
-		cordOrig[1][2] = cordOrig[2][2];
-		cordOrig[2][0] = tempX;
-		cordOrig[2][1] = tempY;
-		cordOrig[2][2] = tempZ;*/
-
+		uvList[2][0] = tempUV0;
+		uvList[2][1] = tempUV1;
 		leftEdge++;
 	}
 	calculateLineEquation(cord[0], cord[1], &A[0], &B[0], &C[0]);
@@ -722,6 +724,12 @@ int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
 	//solve shading equation to get colors for 3 vertices of totalAreangle 
 	GzColor col1, col2, col3;
 	if(render->interp_mode == GZ_COLOR || render->interp_mode == GZ_NORMAL) {
+		if(render->tex_fun && render->interp_mode == GZ_COLOR) {
+			// change Ka, Kd, Ks to 1
+			render->Ka[RED] = render->Ka[GREEN] = render->Ka[BLUE] = 1;
+			render->Kd[RED] = render->Kd[GREEN] = render->Kd[BLUE] = 1;
+			render->Ks[RED] = render->Ks[GREEN] = render->Ks[BLUE] = 1;
+		}
 		calculateShadingEquation(render, xformNorm[0], col1);
 		calculateShadingEquation(render, xformNorm[1], col2);
 		calculateShadingEquation(render, xformNorm[2], col3);
@@ -774,7 +782,7 @@ int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
 			
 	// check all pixles between (minX, minY) to (maxX, maxY)
 	int cnt=0;
-	GzDepth z=0;
+	float z=0;
 	float r,g,b;
 	for(int i = floor(minX) ; i < ceil(maxX) ; i++) {
 		for(int j = floor(minY) ; j < ceil(maxY); j++) {
@@ -788,6 +796,21 @@ int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
 						float area1 = calculateTraingleArea(cord[1], position, cord[2]);
 						float area2 = calculateTraingleArea(cord[0], position, cord[2]);
 						float area3 = calculateTraingleArea(cord[0], position, cord[1]);
+
+						//interpolate UV
+						GzTextureIndex UVList;
+						UVList[0] = (area1*uvList[0][0] + area2*uvList[1][0] + area3*uvList[2][0]) / totalArea;
+						UVList[1] = (area1*uvList[0][1] + area2*uvList[1][1] + area3*uvList[2][1]) / totalArea;
+						float fact = (z / (INT_MAX - z)) +1;
+						UVList[0] *= fact;
+						UVList[1] *= fact;
+						
+						GzColor texColor;
+
+						if(render->tex_fun) {
+							render->tex_fun(UVList[0], UVList[1], texColor);
+						}
+
 						if(render->interp_mode == GZ_NORMAL) {
 							GzCoord normal;
 							//calculate normal to this pixle
@@ -795,6 +818,12 @@ int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
 							normal[Y] = area1*xformNorm[0][Y] + area2*xformNorm[1][Y] + area3*xformNorm[2][Y];
 							normal[Z] = area1*xformNorm[0][Z] + area2*xformNorm[1][Z] + area3*xformNorm[2][Z];
 							normalizeVector(normal);
+
+							if (render->tex_fun) {
+								render->Ka[RED] = render->Kd[RED] = texColor[RED];
+								render->Ka[GREEN] = render->Kd[GREEN] = texColor[GREEN];
+								render->Ka[BLUE] = render->Kd[BLUE] = texColor[BLUE];
+							}
 
 							GzColor c;
 							calculateShadingEquation(render, normal, c);
@@ -808,6 +837,12 @@ int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
 							r = (area1*col1[0] + area2*col2[0] + area3*col3[0]) / totalArea;
 						    g = (area1*col1[1] + area2*col2[1] + area3*col3[1]) / totalArea;
 							b = (area1*col1[2] + area2*col2[2] + area3*col3[2]) / totalArea;
+
+							if(render->tex_fun) {
+								r *= texColor[RED];
+								g *= texColor[GREEN];
+								b *= texColor[BLUE];
+							}
 						}
 						else { //flat shading
 							r = render->flatcolor[0];

@@ -20,10 +20,10 @@ public:
 	virtual ~Application();
 	
 public:
-	GzDisplay* m_pDisplay;		// the display
-	GzRender*  m_pRender;		// the renderer
+	GzDisplay* m_pDisplay[6];		// the display
+	GzRender*  m_pRender[6];		// the renderer
 	GzInput*   m_pUserInput;
-	char* m_pFrameBuffer;	// Frame Buffer
+	char* m_pFrameBuffer[6];	// Frame Buffer
 	int   m_nWidth;			// width of Frame Buffer
 	int   m_nHeight;		// height of Frame Buffer
 

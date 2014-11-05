@@ -22,6 +22,14 @@ static char THIS_FILE[]=__FILE__;
 #define INFILE  "ppot.asc"
 #define OUTFILE "output.ppm"
 
+	float AAFilter[6][3] = {
+		-0.52, 0.38, 0.128,
+		0.41, 0.56, 0.119,
+		0.27, 0.08, 0.294,
+		-0.17, -0.29, 0.249,
+		0.58, -0.55, 0.104,
+		-0.31, -0.71, 0.106
+	};
 
 extern int tex_fun(float u, float v, GzColor color); /* image texture function */
 extern int ptex_fun(float u, float v, GzColor color); /* procedural texture function */
@@ -54,7 +62,8 @@ int Application5::Initialize()
 	int			shaderType, interpStyle;
 	float		specpower;
 	int		status; 
- 
+
+	for(int index=0; index<6 ; index++) {	
 	status = 0; 
 
 	/* 
@@ -68,15 +77,15 @@ int Application5::Initialize()
  	m_nWidth = 256;		// frame buffer and display width
 	m_nHeight = 256;    // frame buffer and display height
 
-	status |= GzNewFrameBuffer(&m_pFrameBuffer, m_nWidth, m_nHeight);
+	status |= GzNewFrameBuffer(&m_pFrameBuffer[index], m_nWidth, m_nHeight);
 
-	status |= GzNewDisplay(&m_pDisplay, GZ_RGBAZ_DISPLAY, m_nWidth, m_nHeight);
+	status |= GzNewDisplay(&m_pDisplay[index], GZ_RGBAZ_DISPLAY, m_nWidth, m_nHeight);
 
-	status |= GzGetDisplayParams(m_pDisplay, &xRes, &yRes, &dispClass); 
+	status |= GzGetDisplayParams(m_pDisplay[index], &xRes, &yRes, &dispClass); 
 	 
-	status |= GzInitDisplay(m_pDisplay); 
+	status |= GzInitDisplay(m_pDisplay[index]); 
  
-	status |= GzNewRender(&m_pRender, GZ_Z_BUFFER_RENDER, m_pDisplay); 
+	status |= GzNewRender(&m_pRender[index], GZ_Z_BUFFER_RENDER, m_pDisplay[index]); 
 
 /* Translation matrix */
 GzMatrix	scale = 
@@ -118,11 +127,11 @@ GzMatrix	rotateY =
 
     camera.FOV = 63.7;              /* degrees *              /* degrees */
 
-	status |= GzPutCamera(m_pRender, &camera); 
+	status |= GzPutCamera(m_pRender[index], &camera); 
 #endif 
 
 	/* Start Renderer */
-	status |= GzBeginRender(m_pRender);
+	status |= GzBeginRender(m_pRender[index]);
 
 	/* Light */
 	GzLight	light1 = { {-0.7071, 0.7071, 0}, {0.5, 0.5, 0.9} };
@@ -148,11 +157,11 @@ GzMatrix	rotateY =
         valueListLights[1] = (GzPointer)&light2;
         nameListLights[2] = GZ_DIRECTIONAL_LIGHT;
         valueListLights[2] = (GzPointer)&light3;
-        status |= GzPutAttribute(m_pRender, 3, nameListLights, valueListLights);
+        status |= GzPutAttribute(m_pRender[index], 3, nameListLights, valueListLights);
 
         nameListLights[0] = GZ_AMBIENT_LIGHT;
         valueListLights[0] = (GzPointer)&ambientlight;
-        status |= GzPutAttribute(m_pRender, 1, nameListLights, valueListLights);
+        status |= GzPutAttribute(m_pRender[index], 1, nameListLights, valueListLights);
 
         /*
          * Tokens associated with shading 
@@ -179,21 +188,31 @@ GzMatrix	rotateY =
 #if 0   /* set up null texture function or valid pointer */
         valueListShader[5] = (GzPointer)0;
 #else
-        valueListShader[5] = (GzPointer)(ptex_fun);	/* or use ptex_fun */
+        valueListShader[5] = (GzPointer)(tex_fun);	/* or use ptex_fun */
+		//valueListShader[5] = (GzPointer)(ptex_fun);	/* or use ptex_fun */
 #endif
-        status |= GzPutAttribute(m_pRender, 6, nameListShader, valueListShader);
+		float oofsetX = AAFilter[index][X];
+		float offsetY = AAFilter[index][Y];
+		valueListShader[6] = (GzPointer)&oofsetX;
+		nameListShader[6] = GZ_AASHIFTX;
+
+		valueListShader[7] = (GzPointer)&offsetY;
+		nameListShader[7] = GZ_AASHIFTY;
+
+        status |= GzPutAttribute(m_pRender[index], 8, nameListShader, valueListShader);
 
 
-	status |= GzPushMatrix(m_pRender, scale);  
-	status |= GzPushMatrix(m_pRender, rotateY); 
-	status |= GzPushMatrix(m_pRender, rotateX); 
+	status |= GzPushMatrix(m_pRender[index], scale);  
+	status |= GzPushMatrix(m_pRender[index], rotateY); 
+	status |= GzPushMatrix(m_pRender[index], rotateX); 
 
 	if (status) exit(GZ_FAILURE); 
-
+	}
 	if (status) 
 		return(GZ_FAILURE); 
 	else 
 		return(GZ_SUCCESS); 
+	
 }
 
 int Application5::Render() 
@@ -206,9 +225,18 @@ int Application5::Render()
 	char		dummy[256]; 
 	int			status; 
 
+	FILE *outfile;
+	if( (outfile  = fopen( OUTFILE , "wb" )) == NULL )
+	{
+         AfxMessageBox( "The output file was not opened\n" );
+		 return GZ_FAILURE;
+	}
 
+	for(int index=0 ; index<6 ; index++) {
+		status = 0;
+	
 	/* Initialize Display */
-	status |= GzInitDisplay(m_pDisplay); 
+	status |= GzInitDisplay(m_pDisplay[index]); 
 	
 	/* 
 	* Tokens associated with triangle vertex values 
@@ -222,13 +250,6 @@ int Application5::Render()
 	if( (infile  = fopen( INFILE , "r" )) == NULL )
 	{
          AfxMessageBox( "The input file was not opened\n" );
-		 return GZ_FAILURE;
-	}
-
-	FILE *outfile;
-	if( (outfile  = fopen( OUTFILE , "wb" )) == NULL )
-	{
-         AfxMessageBox( "The output file was not opened\n" );
 		 return GZ_FAILURE;
 	}
 
@@ -264,11 +285,11 @@ int Application5::Render()
 	     valueListTriangle[0] = (GzPointer)vertexList; 
 		 valueListTriangle[1] = (GzPointer)normalList; 
 		 valueListTriangle[2] = (GzPointer)uvList; 
-		 GzPutTriangle(m_pRender, 3, nameListTriangle, valueListTriangle); 
+		 GzPutTriangle(m_pRender[index], 3, nameListTriangle, valueListTriangle); 
 	} 
 
-	GzFlushDisplay2File(outfile, m_pDisplay); 	/* write out or update display to file*/
-	GzFlushDisplay2FrameBuffer(m_pFrameBuffer, m_pDisplay);	// write out or update display to frame buffer
+	
+	GzFlushDisplay2FrameBuffer(m_pFrameBuffer[index], m_pDisplay[index]);	// write out or update display to frame buffer
 
 	/* 
 	 * Close file
@@ -276,10 +297,37 @@ int Application5::Render()
 
 	if( fclose( infile ) )
       AfxMessageBox( "The input file was not closed\n" );
+	
+	if (status) 
+		break;
 
+	}
+
+	//loop for px
+	for(int i=0 ; i<(m_pDisplay[0])->xres ; i++) {
+		for(int j=0 ; j<(m_pDisplay[0])->yres ; j++) {
+			GzPixel p;
+			p.red = 0;
+			p.blue = 0;
+			p.green = 0;
+			p.alpha = 0;
+			p.z = 0;
+			for(int k=0 ; k<6 ; k++) {
+				GzPixel p1 = (m_pDisplay[k])->fbuf[i+(j*m_pDisplay[k]->xres)];
+				p.red += p1.red * AAFilter[k][2];
+				p.green += p1.green * AAFilter[k][2];
+				p.blue += p1.blue * AAFilter[k][2];
+				p.alpha += p1.alpha * AAFilter[k][2];
+				p.z += p1.z * AAFilter[k][2];
+			}
+			(m_pDisplay[0])->fbuf[i+(j*m_pDisplay[0]->xres)] = p;
+		}
+	}
+	GzFlushDisplay2File(outfile, m_pDisplay[0]); 	/* write out or update display to file*/
+	GzFlushDisplay2FrameBuffer(m_pFrameBuffer[0], m_pDisplay[0]);	// write out or update display to frame buffer
 	if( fclose( outfile ) )
       AfxMessageBox( "The output file was not closed\n" );
- 
+	
 	if (status) 
 		return(GZ_FAILURE); 
 	else 
@@ -293,13 +341,15 @@ int Application5::Clean()
 	 */ 
 	int	status = 0; 
 
-	status |= GzFreeRender(m_pRender); 
-	status |= GzFreeDisplay(m_pDisplay);
+	for(int index=0 ; index<6 ; index++) {
+	status |= GzFreeRender(m_pRender[index]); 
+	status |= GzFreeDisplay(m_pDisplay[index]);
 	
 	if (status) 
 		return(GZ_FAILURE); 
 	else 
 		return(GZ_SUCCESS);
+	}
 }
 
 

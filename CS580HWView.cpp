@@ -123,12 +123,12 @@ void CCS580HWView::OnRender()
 
 void CCS580HWView::DrawFrameBuffer(CDC *pDC)
 {
-	if(m_pApplication->m_pFrameBuffer == NULL)
+	if(m_pApplication->m_pFrameBuffer[0] == NULL)
     {
         return;
     }
 
-	if(!m_pApplication->m_pRender->open)
+	if(!m_pApplication->m_pRender[0]->open)
 	{
 		AfxMessageBox("Renderer was not opened\n");
 		return;
@@ -162,7 +162,7 @@ void CCS580HWView::DrawFrameBuffer(CDC *pDC)
 	GetDIBits(hdc, m_bitmap, 0, 0, 0, binfo, colors);
     binfo->bmiHeader.biBitCount = 24;
     binfo->bmiHeader.biHeight = -abs(binfo->bmiHeader.biHeight);
-    SetDIBits(hdc, m_bitmap, 0, m_pApplication->m_nHeight, m_pApplication->m_pFrameBuffer, binfo, colors);
+    SetDIBits(hdc, m_bitmap, 0, m_pApplication->m_nHeight, m_pApplication->m_pFrameBuffer[0], binfo, colors);
 
     ::SetStretchBltMode(pDC->m_hDC, COLORONCOLOR);
     CRect client;
@@ -236,7 +236,8 @@ void CCS580HWView::OnRotate()
 		}
 
 		// Accumulate matrix
-		GzPushMatrix(m_pApplication->m_pRender, rotMat); 
+		for(int i=0 ; i<6 ; i++)
+			GzPushMatrix(m_pApplication->m_pRender[i], rotMat); 
 	}
 }
 
@@ -273,7 +274,8 @@ void CCS580HWView::OnTranslate()
 		GzTrxMat(input->translation, trxMat);
 
 		// Accumulate matrix
-		GzPushMatrix(m_pApplication->m_pRender, trxMat); 
+		for(int i=0 ; i<6 ; i++)
+			GzPushMatrix(m_pApplication->m_pRender[i], trxMat); 
 	}
 }
 
@@ -310,6 +312,7 @@ void CCS580HWView::OnScale()
 		GzScaleMat(input->scale, scaleMat);
 
 		// Accumulate matrix
-		GzPushMatrix(m_pApplication->m_pRender, scaleMat); 
+		for(int i=0 ; i<6 ; i++)
+			GzPushMatrix(m_pApplication->m_pRender[i], scaleMat); 
 	}
 }

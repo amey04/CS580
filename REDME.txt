@@ -1,4 +1,5 @@
 Visual Studio version 2008
 
-For flat shading set "interpStyle = GZ_FLAT;" in Application4.cpp
+To run procedural texture uncomment line 183 from Application5.cpp 
+("valueListShader[5] = (GzPointer)(ptex_fun);"
 

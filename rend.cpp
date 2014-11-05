@@ -179,7 +179,33 @@ int GzFreeRender(GzRender *render)
 /* 
 -free all renderer resources
 */
+	if (render == NULL) {
+		return GZ_FAILURE;
+	}
+	//render->display == NULL;
+	/*GzFreeDisplay(render->display);
+
+	for (int i = 0; i < render->matlevel; ++i) {
+		delete render->Ximage[i];
+		delete render->Xnorm[i];
+	}
+	delete [] render->Ximage;
+	delete [] render->Xnorm;
+	for (int i = 0; i < render->numlights; ++i) {
+		delete [] render->lights[i].color;
+		delete [] render->lights[i].direction;
+	}
+	delete [] render->lights;
+
+	delete [] render->Xsp;
+
+	delete [] render->camera.Xiw;
+	delete [] render->camera.Xpi;
+	delete [] render->camera.lookat;
+	delete [] render->camera.position;
+	delete [] render->camera.worldup;*/
 	delete render;
+
 	return GZ_SUCCESS;
 }
 
@@ -502,6 +528,16 @@ int GzPutAttribute(GzRender	*render, int numAttributes, GzToken	*nameList,
 				render->tex_fun = (GzTexture) valueList[i];
 				break;
 				}
+			case GZ_AASHIFTX:
+				{
+					render->offsetX = *((float*) valueList[i]);
+					break;
+				}
+			case GZ_AASHIFTY:
+				{
+					render->offsetY = *((float*) valueList[i]);
+					break;
+				}
 		}
 	}
 
@@ -579,6 +615,9 @@ int GzPutTriangle(GzRender *render, int	numParts, GzToken *nameList,
 				cord[index][X] /= w;
 				cord[index][Y] /= w;
 				cord[index][Z] /= w;
+
+				cord[index][X] -= render->offsetX;
+				cord[index][Y] -= render->offsetY;
 			}
 		}
 		else if(nameList[i] == GZ_NORMAL) {

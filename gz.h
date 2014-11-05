@@ -27,6 +27,9 @@
 #define GZ_NORMAL               2
 #define GZ_TEXTURE_INDEX        3
 
+#define	GZ_AASHIFTX			44		/* antialiasing screen offset */
+#define	GZ_AASHIFTY			45		/* antialiasing screen offset */
+
 /* renderer-state default pixel color */
 #define GZ_RGB_COLOR            99	
 

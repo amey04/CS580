@@ -4,7 +4,6 @@
 #include	"Gz.h"
 #include "math.h"
 #include <complex>
-#include <map>
 
 GzColor	*image;
 int xs, ys;
@@ -76,10 +75,12 @@ int tex_fun(float u, float v, GzColor color)
 	D[X] = floor(u1);
 	D[Y] = ceil(v1);
 
+	float s = u1 - floor(u1);
+	float t = v1 - floor(v1);
 /* set color to interpolated GzColor value and return */
-	color[RED] = u*v*image[POS(C)][RED] + (1-u)*v*image[POS(D)][RED] + u*(1-v)*image[POS(B)][RED] + (1-u)*(1-v)*image[POS(A)][RED];
-	color[GREEN] = u*v*image[POS(C)][GREEN] + (1-u)*v*image[POS(D)][GREEN] + u*(1-v)*image[POS(B)][GREEN] + (1-u)*(1-v)*image[POS(A)][GREEN];
-	color[BLUE] = u*v*image[POS(C)][BLUE] + (1-u)*v*image[POS(D)][BLUE] + u*(1-v)*image[POS(B)][BLUE] + (1-u)*(1-v)*image[POS(A)][BLUE];
+	color[RED] = s*t*image[POS(C)][RED] + (1-s)*t*image[POS(D)][RED] + s*(1-t)*image[POS(B)][RED] + (1-s)*(1-t)*image[POS(A)][RED];
+	color[GREEN] = s*t*image[POS(C)][GREEN] + (1-s)*t*image[POS(D)][GREEN] + s*(1-t)*image[POS(B)][GREEN] + (1-s)*(1-t)*image[POS(A)][GREEN];
+	color[BLUE] = s*t*image[POS(C)][BLUE] + (1-s)*t*image[POS(D)][BLUE] + s*(1-t)*image[POS(B)][BLUE] + (1-s)*(1-t)*image[POS(A)][BLUE];
 
 	return GZ_SUCCESS;
 }
@@ -103,14 +104,14 @@ void mapColor(float length, GzColor c)
 	GzColor c3 = {1,1,0.2};
 	GzColor c4 = {0,0,1};
 	GzColor c5 = {0.6,0,0.4};
-	GzColor c6 ={0,0.4,0};
+	GzColor c6 = {0,0.4,0};
 	GzColor c7 = {1,0.6,0};
 	GzColor c8 = {0,0,0.4};
 	GzColor c9 = {0,0.5,0.5};
 	GzColor c10 = {1,0,0.6};
-	GzColor c11 = {0,0.4,0.3};
+	GzColor c11 = {0.2,0.4,0.3};
 
-	float a, b;
+	double a, b;
 
 	if(length >= 0.0 && length <= 0.2) {
 		a = (0.2 - length)/(0.2);
@@ -189,7 +190,7 @@ int ptex_fun(float u, float v, GzColor color)
 {	
 	int maxiter = 500;
 
-	if (u < 0) {
+	/*if (u < 0) {
 		u = 0;
 	} else if (u > 1) {
 		u = 1;
@@ -198,25 +199,30 @@ int ptex_fun(float u, float v, GzColor color)
 		v = 0;
 	} else if (v > 1) {
 		v = 1;
-	}
+	}*/
+
+	u *= 1.67;
+	v *= 1.67;
+	//u = -u; v= -v;
 
 	using namespace std;
-	complex<float> X1(u, v);
+	complex<double> X1(u, v);
 	double Cr = 0.12375;
 	double Ci = 0.56805;
-	complex<float> C1(0.12375, 0.56805);
-	complex<float> R(0,0);
+	complex<double> C1(0.12375, 0.56805);
+	//complex<double> C1(0.70176, -0.3842);
+	complex<double> R(0,0);
 	int n=0;
 
 	while (n < maxiter) {
-		R = (X1*X1) + C1;
-		if((R.real()*R.real() + R.imag()*R.imag()) > 2)
-			break;
-		X1 = R;
+		X1 = (X1*X1) + C1;
+		//X1 = R;
+		if((X1.real()*X1.real() + X1.imag()*X1.imag()) > 2)
+			break;		
 		n++;
 	}
-	float real = R.real();
-	float imag = R.imag();
+	float real = X1.real();
+	float imag = X1.imag();
 	float length = sqrt(real*real + imag*imag);
 	if(length < 0)
 		length = 0;
@@ -224,35 +230,7 @@ int ptex_fun(float u, float v, GzColor color)
 		length = 2;
 
 	mapColor(length, color);
-	/*if(n==maxiter) {
-		color[RED] = 0.2;
-		color[GREEN] = 0.2;
-		color[BLUE] = 0.2;
-	}
-	else if(n > 200){
-		color[RED] = 0;
-		color[GREEN] = 0;
-		color[BLUE] = 0;
-	}
-	else if(n > 150){
-		color[RED] = 0.45;
-		color[GREEN] = 0;
-		color[BLUE] = 0.45;
-	}
-	else if(n > 100){
-		color[RED] = 0.8;
-		color[GREEN] = 0.7;
-		color[BLUE] = 0.3;
-	}
-	else if(n > 50){
-		color[RED] = 0.12;
-		color[GREEN] = 0.32;
-		color[BLUE] = 0.26;
-	}
 
-	color[RED] = (static_cast <float> (rand()) / static_cast <float> (RAND_MAX));
-	color[GREEN] = (static_cast <float> (rand()) / static_cast <float> (RAND_MAX));
-	color[BLUE] = (static_cast <float> (rand()) / static_cast <float> (RAND_MAX));*/
 	return GZ_SUCCESS;
 }
 
